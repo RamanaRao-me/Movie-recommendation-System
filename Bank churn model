@@ -1,0 +1,113 @@
+# -------------------------
+# Bank Customer Churn Model
+# -------------------------
+
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Load dataset
+df = pd.read_csv('Churn_Modelling.csv')
+
+# -------------------------
+# Step 1: Business Overview
+# -------------------------
+print("Dataset Shape:", df.shape)
+print("First 5 rows:\n", df.head())
+print("\nChurn Distribution:\n", df['Exited'].value_counts())
+
+# -------------------------
+# Step 2: Exploratory Data Analysis
+# -------------------------
+# Plot churn distribution
+sns.countplot(x='Exited', data=df)
+plt.title('Churn vs Non-Churn Customers')
+plt.xlabel('Exited')
+plt.ylabel('Count')
+plt.show()
+
+# Correlation matrix
+corr = df.corr()
+plt.figure(figsize=(12, 8))
+sns.heatmap(corr, annot=True, fmt='.2f', cmap='coolwarm')
+plt.title('Feature Correlation Heatmap')
+plt.show()
+
+# -------------------------
+# Step 3: Data Preprocessing
+# -------------------------
+# Drop irrelevant columns
+df = df.drop(['RowNumber', 'CustomerId', 'Surname'], axis=1)
+
+# Label encode Gender
+le = LabelEncoder()
+df['Gender'] = le.fit_transform(df['Gender'])  # Male=1, Female=0
+
+# One-hot encode Geography
+df = pd.get_dummies(df, columns=['Geography'], drop_first=True)
+
+# Features and target
+X = df.drop('Exited', axis=1)
+y = df['Exited']
+
+# Feature scaling
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# -------------------------
+# Step 4: Train/Test Split
+# -------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.2, random_state=42
+)
+
+# -------------------------
+# Step 5: Model Training
+# -------------------------
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# -------------------------
+# Step 6: Model Evaluation
+# -------------------------
+y_pred = model.predict(X_test)
+
+print("\nAccuracy Score:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
+
+# -------------------------
+# Step 7: Feature Importance
+# -------------------------
+feature_importance = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': model.feature_importances_
+}).sort_values(by='Importance', ascending=False)
+
+# Plot feature importance
+plt.figure(figsize=(10, 6))
+sns.barplot(x='Importance', y='Feature', data=feature_importance)
+plt.title('Feature Importance in Customer Churn Prediction')
+plt.xlabel('Importance')
+plt.ylabel('Feature')
+plt.show()
+
+# -------------------------
+# Step 8: Business Insights
+# -------------------------
+print("\n🔍 Top Factors influencing Churn:")
+print(feature_importance.head(5))
